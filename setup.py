@@ -1,26 +1,23 @@
+#!/usr/bin/env python
+
 import os
 from setuptools import setup
 from lbrynet.conf import PROTOCOL_PREFIX, APP_NAME, ICON_PATH
+import sys
 
-APP = [os.path.join('lbrygui', 'app.py')]
-# DATA_FILES = [(d, [os.path.join(d,f) for f in files]) for d, folders, files in os.walk('/Users/johnrobison/lbry-gui/lbrygui/static')]
+APP = [os.path.join('lbrygui', 'main.py')]
 DATA_FILES = []
 DATA_FILES.append('app.icns')
 
 OPTIONS = {
-    'argv_emulation': True,
+    # 'argv_emulation': True,
     'iconfile': ICON_PATH,
     'plist': {
+        'CFBundleIdentifier': 'io.lbry.LBRY',
         'LSUIElement': True,
-        'CFBundleURLTypes': [
-            {
-                'CFBundleURLTypes': APP_NAME,
-                'CFBundleURLSchemes': [PROTOCOL_PREFIX]
-            }],
     },
-    'packages': ['lbrynet', 'lbryum', 'requests', 'unqlite', ],
-                 # 'six', 'os', 'twisted', 'miniupnpc', 'seccure',
-                 # 'bitcoinrpc', 'txjsonrpc', 'Crypto', 'gmpy', 'yapsy', 'google.protobuf']
+    'packages': ['lbrynet', 'lbryum', 'requests', 'unqlite', 'certifi',
+                 'pkg_resources', 'json', 'jsonrpc', 'seccure',],
 }
 
 
