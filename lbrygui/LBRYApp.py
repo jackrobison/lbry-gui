@@ -16,6 +16,7 @@ from twisted.web import server, static
 
 from lbrynet.lbrynet_daemon.LBRYDaemon import LBRYDaemon, LBRYindex, LBRYDaemonWeb, LBRYFileRender
 from lbrynet.conf import API_ADDRESS, API_CONNECTION_STRING, API_PORT, API_INTERFACE, DEFAULT_WALLET, ICON_PATH, APP_NAME
+from lbrynet.conf import UI_ADDRESS
 from LBRYNotify import LBRYNotify
 
 
@@ -31,6 +32,9 @@ class LBRYDaemonApp(AppKit.NSApplication):
         self.statusitem.setImage_(self.icon)
 
         self.menubarMenu = AppKit.NSMenu.alloc().init()
+
+        self.open = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Open", "openui:", "")
+        self.menubarMenu.addItem_(self.open)
 
         self.quit = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("Quit", "terminate:", "")
         self.menubarMenu.addItem_(self.quit)
@@ -68,10 +72,13 @@ class LBRYDaemonApp(AppKit.NSApplication):
         d = getui()
         d.addCallback(lambda _: setupserver(daemon))
         d.addCallback(lambda _: daemon.setup(DEFAULT_WALLET, "False"))
-        d.addCallback(lambda _: webbrowser.get('safari').open("http://localhost:5279"))
+        d.addCallback(lambda _: webbrowser.get('safari').open(UI_ADDRESS))
         d.callback(None)
 
         reactor.interleave(AppHelper.callAfter)
+
+    def openui_(self, sender):
+        webbrowser.get('safari').open(UI_ADDRESS)
 
     def replyToApplicationShouldTerminate_(self, shouldTerminate):
         LBRYNotify("Goodbye!")
