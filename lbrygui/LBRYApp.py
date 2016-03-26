@@ -4,6 +4,7 @@ import os
 import shutil
 import webbrowser
 import subprocess
+import sys
 
 
 from appdirs import user_data_dir
@@ -56,16 +57,26 @@ class LBRYDaemonApp(AppKit.NSApplication):
                 return defer.succeed(dest_dir)
 
             data_dir = user_data_dir("LBRY")
+            version_dir = os.path.join(data_dir, "ui_version_history")
+
             git_version = subprocess.check_output("git ls-remote https://github.com/lbryio/lbry-web-ui.git | grep HEAD | cut -f 1", shell=True)
 
-            if not os.path.isdir(os.path.join(data_dir, "ui_version_history")):
-                os.mkdir(os.path.join(data_dir, "ui_version_history"))
+            if not os.path.isdir(data_dir):
+                os.mkdir(data_dir)
 
-            if not os.path.isfile(os.path.join(data_dir, "ui_version_history", git_version)):
-                f = open(os.path.join(data_dir, "ui_version_history", git_version), "w")
-                version_message = "Updating UI " + str(datetime.now())
-                f.write(version_message)
-                f.close()
+            if not os.path.isdir(os.path.join(data_dir, "ui_version_history")):
+                os.mkdir(version_dir)
+
+            if not os.path.isfile(os.path.join(version_dir, git_version)):
+                try:
+                    f = open(os.path.join(version_dir, git_version), "w")
+                    version_message = "Updating UI " + str(datetime.now())
+                    f.write(version_message)
+                    f.close()
+                except:
+                    LBRYNotify("You should have been notified to install xcode command line tools, once it's installed you can start LBRY")
+                    sys.exit(0)
+
                 if os.path.isdir(os.path.join(data_dir, "lbry-web-ui")):
                     os.rmdir(os.path.join(data_dir, "lbry-web-ui"))
 
