@@ -3,7 +3,11 @@ import tempfile
 import os
 import shutil
 import webbrowser
+import subprocess
 
+
+from appdirs import user_data_dir
+from datetime import datetime
 from StringIO import StringIO
 from zipfile import ZipFile
 from urllib import urlopen
@@ -45,35 +49,51 @@ class LBRYDaemonApp(AppKit.NSApplication):
         LBRYNotify("Starting LBRY")
 
         def getui():
-            d = defer.Deferred(None)
-            self.tmpdir = tempfile.mkdtemp()
+            def download_ui(dest_dir):
+                url = urlopen("https://rawgit.com/lbryio/lbry-web-ui/master/dist.zip")
+                z = ZipFile(StringIO(url.read()))
+                z.extractall(dest_dir)
+                return defer.succeed(dest_dir)
 
-            d.addCallback(lambda _: urlopen("https://rawgit.com/lbryio/lbry-web-ui/master/dist.zip"))
-            d.addCallback(lambda url: ZipFile(StringIO(url.read())))
-            d.addCallback(lambda z: z.extractall(self.tmpdir))
+            data_dir = user_data_dir("LBRY")
+            git_version = subprocess.check_output("git ls-remote https://github.com/lbryio/lbry-web-ui.git | grep HEAD | cut -f 1", shell=True)
 
-            return d
+            if not os.path.isdir(os.path.join(data_dir, "ui_version_history")):
+                os.mkdir(os.path.join(data_dir, "ui_version_history"))
 
-        def setupserver(daemon):
-            root = LBRYindex(self.tmpdir)
-            root.putChild("css", static.File(os.path.join(self.tmpdir, "css")))
-            root.putChild("font", static.File(os.path.join(self.tmpdir, "font")))
-            root.putChild("img", static.File(os.path.join(self.tmpdir, "img")))
-            root.putChild("js", static.File(os.path.join(self.tmpdir, "js")))
-            root.putChild(API_ADDRESS, daemon)
+            if not os.path.isfile(os.path.join(data_dir, "ui_version_history", git_version)):
+                f = open(os.path.join(data_dir, "ui_version_history", git_version), "w")
+                version_message = "Updating UI " + str(datetime.now())
+                f.write(version_message)
+                f.close()
+                if os.path.isdir(os.path.join(data_dir, "lbry-web-ui")):
+                    os.rmdir(os.path.join(data_dir, "lbry-web-ui"))
+
+            if os.path.isdir(os.path.join(data_dir, "lbry-web-ui")):
+                return defer.succeed(os.path.join(data_dir, "lbry-web-ui"))
+            else:
+                return download_ui((os.path.join(data_dir, "lbry-web-ui")))
+
+        def setupserver(ui_dir):
+            root = LBRYindex(ui_dir)
+            root.putChild("css", static.File(os.path.join(ui_dir, "css")))
+            root.putChild("font", static.File(os.path.join(ui_dir, "font")))
+            root.putChild("img", static.File(os.path.join(ui_dir, "img")))
+            root.putChild("js", static.File(os.path.join(ui_dir, "js")))
             root.putChild("webapi", LBRYDaemonWeb())
             root.putChild("view", LBRYFileRender())
+            return defer.succeed(root)
+
+        def setupapi(root):
+            daemon = LBRYDaemon()
+            root.putChild(API_ADDRESS, daemon)
             reactor.listenTCP(API_PORT, server.Site(root), interface=API_INTERFACE)
+            return daemon.setup(DEFAULT_WALLET, "False")
 
-            return defer.succeed(True)
-
-
-        daemon = LBRYDaemon()
         d = getui()
-        d.addCallback(lambda _: setupserver(daemon))
-        d.addCallback(lambda _: daemon.setup(DEFAULT_WALLET, "False"))
-        d.addCallback(lambda _: webbrowser.get('safari').open(UI_ADDRESS))
-        d.callback(None)
+        d.addCallback(setupserver)
+        d.addCallback(setupapi)
+        d.addCallback(lambda _: webbrowser.get("safari").open(UI_ADDRESS))
 
         reactor.interleave(AppHelper.callAfter)
 
@@ -82,5 +102,4 @@ class LBRYDaemonApp(AppKit.NSApplication):
 
     def replyToApplicationShouldTerminate_(self, shouldTerminate):
         LBRYNotify("Goodbye!")
-        shutil.rmtree(self.tmpdir)
         reactor.stop()
