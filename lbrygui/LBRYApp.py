@@ -6,7 +6,6 @@ import webbrowser
 import subprocess
 import sys
 
-
 from appdirs import user_data_dir
 from datetime import datetime
 from StringIO import StringIO
@@ -19,7 +18,7 @@ _threadedselect.install()
 from twisted.internet import reactor, defer
 from twisted.web import server, static
 
-from lbrynet.lbrynet_daemon.LBRYDaemon import LBRYDaemon, LBRYindex, LBRYDaemonWeb, LBRYFileRender
+from lbrynet.lbrynet_daemon.LBRYDaemon import LBRYDaemon, LBRYindex, LBRYFileRender
 from lbrynet.conf import API_ADDRESS, API_CONNECTION_STRING, API_PORT, API_INTERFACE, DEFAULT_WALLET, ICON_PATH, APP_NAME
 from lbrynet.conf import UI_ADDRESS
 from LBRYNotify import LBRYNotify
@@ -91,7 +90,6 @@ class LBRYDaemonApp(AppKit.NSApplication):
             root.putChild("font", static.File(os.path.join(ui_dir, "font")))
             root.putChild("img", static.File(os.path.join(ui_dir, "img")))
             root.putChild("js", static.File(os.path.join(ui_dir, "js")))
-            root.putChild("webapi", LBRYDaemonWeb())
             root.putChild("view", LBRYFileRender())
             return defer.succeed(root)
 
